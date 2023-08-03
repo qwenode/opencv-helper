@@ -184,11 +184,12 @@ func FindAllImageRectsFromDisk(source, search string, threshold float32, matchMo
 }
 
 func FindImageRectFromRaw(source, search *bytes.Buffer, threshold float32, matchMode ...TemplateMatchMode) (rect image.Rectangle, err error) {
-	var matTpl gocv.Mat
-	if _, matTpl, err = getMatsFromRaw(source, search, gocv.IMReadGrayScale); err != nil {
+	var matImage, matTpl gocv.Mat
+	if matImage, matTpl, err = getMatsFromRaw(source, search, gocv.IMReadGrayScale); err != nil {
 		return image.Rectangle{}, err
 	}
 	defer func() {
+		_ = matImage.Close()
 		_ = matTpl.Close()
 	}()
 
@@ -201,11 +202,12 @@ func FindImageRectFromRaw(source, search *bytes.Buffer, threshold float32, match
 }
 
 func FindAllImageRectsFromRaw(source, search *bytes.Buffer, threshold float32, matchMode ...TemplateMatchMode) (rects []image.Rectangle, err error) {
-	var matTpl gocv.Mat
-	if _, matTpl, err = getMatsFromRaw(source, search, gocv.IMReadGrayScale); err != nil {
+	var matImage, matTpl gocv.Mat
+	if matImage, matTpl, err = getMatsFromRaw(source, search, gocv.IMReadGrayScale); err != nil {
 		return nil, err
 	}
 	defer func() {
+		_ = matImage.Close()
 		_ = matTpl.Close()
 	}()
 
@@ -263,12 +265,16 @@ func getMatsFromRaw(bufImage, bufTpl *bytes.Buffer, flags gocv.IMReadFlag) (matI
 		return gocv.Mat{}, gocv.Mat{}, fmt.Errorf("invalid read %w", err)
 	}
 	if matImage.Empty() {
+		_ = matImage.Close()
 		return gocv.Mat{}, gocv.Mat{}, errors.New("invalid read [source]")
 	}
 	if matTpl, err = gocv.IMDecode(bufTpl.Bytes(), flags); err != nil {
+		_ = matImage.Close()
 		return gocv.Mat{}, gocv.Mat{}, fmt.Errorf("invalid read %w", err)
 	}
 	if matTpl.Empty() {
+		_ = matImage.Close()
+		_ = matTpl.Close()
 		return gocv.Mat{}, gocv.Mat{}, errors.New("invalid read [template]")
 	}
 	return
